@@ -1,39 +1,58 @@
-const express = require("express");
+// const express = require("express");
 const csv = require("csvtojson");
 
-const app = express();
+
 
 
 const csvFilePath = `./matches.csv`;
+const csvFilePathOne =`./deliveries.csv`;
+
+let matches ;
+let deliveries ;
 
 
 
+(async()=>{
 
+    matches = await csv().fromFile(csvFilePath);
+    console.log(`
+    
+    MatchesPerYear..........
+    
+    `)
 
-app.get("/", async ( req,res) => {
+    const  years = matches.map(item => Number(item.season));
+    const  seasons = [...new Set(years)].sort();
 
-    const jsonArray = await csv().fromFile(csvFilePath);
-    const years = jsonArray.map(item => Number(item.season));
-    const seasons = [...new Set(years)].sort();
-
-    let noOfMatchesPerYear = []; // 1 
-
-    for (const year of seasons) {
-        const matchCount = years.filter(e => e === year);
-        noOfMatchesPerYear.push({
-            'season': year,
-            'matches': matchCount.length
-        });
+    let numberOfMatchesPerYear =[];
+    for(let year of seasons){
+        let matchCount = years.filter(e=>e===year) ;
+        numberOfMatchesPerYear.push({
+            'season' : year ,
+            'matches' : matchCount.length
+        })
     }
-    res.send(noOfMatchesPerYear);
-});
+    console.log( numberOfMatchesPerYear)
+    
+})();
 
 
-app.get("/teamWins",async(req,res)=>{
-    const jsonArray =await csv().fromFile(csvFilePath);
-    const winnerList = jsonArray.map(item => item.winner);
-    console.log(winnerList)
+  
+// console.log(totalMatches());
+
+(async()=>{
+
+    matches =await csv().fromFile(csvFilePath);
+    console.log(`
+    
+    WinsPerTeam .... 
+    
+    `)
+
+    const winnerList = matches.map(item => item.winner);
+
     const teams = [...new Set(winnerList)].sort();
+
     let teamWins = []; //2
 
     for (const team of teams) {
@@ -43,24 +62,25 @@ app.get("/teamWins",async(req,res)=>{
             'matches': matchCount.length
         });
     }
-    res.send(teamWins)
+    console.log(teamWins)
 
-})
+})() ;
 
-app.get("/extras", async (req, res) => {
-    const csvFilePath = `./deliveries.csv`;
-    const deliveries = await csv().fromFile(csvFilePath);
+( async () => {
+    deliveries = await csv().fromFile(csvFilePathOne);
 
-    const csvFilePathOne = `./matches.csv`;
-    const matches = await csv().fromFile(csvFilePathOne);
+    matches = await csv().fromFile(csvFilePath);
 
     let matchIds = [];
     let result = {}
 
+    console.log(`
+    Extra runs..
+    `)
+
     matches.forEach(item => {
         if (Number(item.season) === 2016) matchIds.push(item.id)
     })
-
     matchIds.forEach((item) => {
         const row = deliveries.filter(e => e.match_id === item);
         row.forEach(item => {
@@ -73,32 +93,34 @@ app.get("/extras", async (req, res) => {
         })
     })
 
-    res.send(result);
-});
+    console.log(result);
+})();
 
+(async()=>{
     
-app.get("/eco", async (req, res) => {
-    console.log("first");
-    const csvFilePathOne = `./matches.csv`;
-    const matchesData = await csv().fromFile(csvFilePathOne);
 
-    const csvFilePath = `./deliveries.csv`;
-    const data = await csv().fromFile(csvFilePath);
+    matches = await csv().fromFile(csvFilePath);
+
+    deliveries = await csv().fromFile(csvFilePathOne);
+
+    console.log(`
+    Most Economical Bowler...
+    `)
 
     let matchIds = [];
     let matchPlayedInYear;
     let bowlers = {};
 
-    matchesData.forEach(item=>{
+
+    matches.forEach(item=>{
         if (Number(item.season) === 2015) matchIds.push(item.id)
     })
     
     matchIds.forEach(item =>{
 
-         matchPlayedInYear = data.filter(e=> e.match_id === item)
+         matchPlayedInYear = deliveries.filter(e=> e.match_id === item)
     })
 
-    // console.log(matchPlayedInYear);
 
     matchPlayedInYear.forEach(item => {
         if (bowlers.hasOwnProperty(item.bowler)) {
@@ -121,7 +143,6 @@ app.get("/eco", async (req, res) => {
     let economicalBowler = {};
 
     let currRate = 100;
-console.log(bowlers);
     Object.keys(bowlers).forEach(item => {
         const bowler = bowlers[item];
  
@@ -136,51 +157,34 @@ console.log(bowlers);
 
 
 
-    res.send(economicalBowler);
-});
+    console.log(economicalBowler);
+})();
 
-app.get("/orangecap",async(req,res)=>{
-    const matchpath = `./matches.csv`
-    const matches = await csv().fromFile(matchpath);
-    const deliveriesPath = `./deliveries.csv`
-    const deliveries = await csv().fromFile(deliveriesPath);
 
-    let matchIds = []
+(async()=>{
+    matches = await csv().fromFile(csvFilePath);
+
+    console.log(`
+    
+    Matches played in the Stadium
+    
+    `);
+
+    const venues ={} ;
 
     matches.forEach(item => {
-        if(Number(item.season)===2017)   matchIds.push(item.id)
-    })
-
-    matchIds.forEach(e=>{
-        matchesInTheYear= deliveries.filter(item => item.match_id===e)
-    })
-
-    let batsmen ={};
-
-    matchesInTheYear.forEach(item => {
-        console.log(item.batsman);
-        if(batsmen.hasOwnProperty(item.batsman)){
-            const batsman = item.batsman ;
-                        // const runs = batsmen[item.runs]+item.batsman_runs;
-             const runs= Number(batsmen[batsman].runs) + Number(item.batsman_runs)
-            let innings = batsmen[batsman].innings
-            if(innings !== item.match_id){
-                innings ++
-            }
-            batsmen [batsman]= {innings , runs};
+        if (venues.hasOwnProperty(item.venue)){
+            const matchesPlayed =  venues[item.venue]+ 1;
+            venues[item.venue] =matchesPlayed
         }
-        else {
-            const batsman = item.batsman ;
-            const runs = item.batsman_runs ;
-            const innings = 1 ;
-            batsmen [batsman]= {innings , runs};
+        else{
+            const matchesPlayed = 1 ;
+            (venues[item.venue ] )= matchesPlayed;
         }
     })
-    // console.log(batsmen)
-
-})
-
-app.listen(8099);
+    console.log(venues)
+    
+})();
 
 
     
